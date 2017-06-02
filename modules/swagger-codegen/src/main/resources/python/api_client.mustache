@@ -311,7 +311,7 @@ class ApiClient(object):
                     if e.status == 401:
                         self.configuration.refresh_oauth2_token()
                     else:
-                        raise ApiException(e)
+                        raise
             else:
                 raise Exception("Unable to connect server, token is invalid")
         else:
