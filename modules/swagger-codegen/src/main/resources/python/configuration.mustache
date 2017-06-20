@@ -9,6 +9,9 @@ import urllib3
 import sys
 import logging
 
+from oauthlib.oauth2 import BackendApplicationClient
+from requests_oauthlib import OAuth2Session
+
 from six import iteritems
 from six.moves import http_client as httplib
 
@@ -37,6 +40,9 @@ class Configuration(object):
         """
         # Default Base url
         self.host = "{{{basePath}}}"
+
+        self.oauth2_url = "{{basePath}}"
+
         # Default api client
         self.api_client = None
         # Temp file folder for downloading files
@@ -54,6 +60,7 @@ class Configuration(object):
 {{#authMethods}}{{#isOAuth}}
         # access token for OAuth
         self.access_token = ""
+        self.oauth2 = None
 {{/isOAuth}}{{/authMethods}}
         # Logging Settings
         self.logger = {}
@@ -193,6 +200,36 @@ class Configuration(object):
         """
         return urllib3.util.make_headers(basic_auth=self.username + ':' + self.password)\
                            .get('authorization')
+
+    def get_oauth2_token(self, client_id, client_secret):
+            """
+            Gets OAuth2 token client_credentials grant
+            """
+            self.oauth = {
+                'session': OAuth2Session(
+                    client=BackendApplicationClient(client_id=client_id)
+                ),
+                'client_id': client_id,
+                'client_secret': client_secret
+            }
+            self._fetch_token()
+
+    def refresh_oauth2_token(self):
+        """
+        Refreshes oauth2 token with refresh_token
+        """
+        self._fetch_token()
+
+    def _fetch_token(self):
+        """
+        Fetch OAuth2 token using the credentials from class variables
+        """
+        token = self.oauth['session'].fetch_token(
+            token_url=self.oauth2_url + '/token',
+            client_id=self.oauth['client_id'],
+            client_secret=self.oauth['client_secret']
+        )
+        self.access_token = token['access_token']
 
     def auth_settings(self):
         """

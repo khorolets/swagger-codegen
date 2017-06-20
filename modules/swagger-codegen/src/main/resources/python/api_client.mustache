@@ -309,12 +309,23 @@ class ApiClient(object):
             If parameter callback is None,
             then the method will return the response directly.
         """
-        if callback is None:
-            return self.__call_api(resource_path, method,
+
+        if not async:
+            # XXX: refactor to use a recursion or invent something better
+            for tries in range(2):
+                try:
+                    return self.__call_api(resource_path, method,
                                    path_params, query_params, header_params,
                                    body, post_params, files,
                                    response_type, auth_settings, callback,
                                    _return_http_data_only, collection_formats, _preload_content, _request_timeout)
+                except ApiException as e:
+                    if e.status == 401:
+                        self.configuration.refresh_oauth2_token()
+                    else:
+                        raise
+            else:
+                raise Exception("Unable to connect server, token is invalid")
         else:
             thread = threading.Thread(target=self.__call_api,
                                       args=(resource_path, method,
@@ -619,6 +630,6 @@ class ApiClient(object):
                 value = data[klass.attribute_map[attr]]
                 kwargs[attr] = self.__deserialize(value, attr_type)
 
-        instance = klass(**kwargs)     
+        instance = klass(**kwargs)
 
         return instance
